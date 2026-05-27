@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학교폭력 예방 퀴즈</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; background: #f5f5f5; }
+.wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px; }
+h1 { font-size: 22px; font-weight: 700; color: #111; }
+.sub { font-size: 14px; color: #777; margin-top: 4px; }
+label { font-size: 13px; color: #666; display: block; margin-bottom: 4px; }
+select, input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: #fff; color: #222; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.field { margin-bottom: 12px; }
+.btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 700; background: #1D9E75; color: #fff; border: none; border-radius: 10px; cursor: pointer; display: block; }
+.btn:disabled { background: #aaa; cursor: default; }
+.btn-sm { width: 100%; padding: 10px; font-size: 14px; background: #f0f0f0; color: #666; border: 1px solid #ddd; border-radius: 10px; cursor: pointer; display: block; margin-top: 8px; }
+.meta { display: flex; justify-content: space-between; font-size: 13px; color: #777; margin-bottom: 6px; }
+.bar { height: 5px; background: #e0e0e0; border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
+.barin { height: 100%; border-radius: 4px; }
+.trow { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.tbar { flex: 1; height: 5px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+.card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 10px; }
+.badge-ox { background: #E1F5EE; color: #0F6E56; }
+.badge-mc { background: #E6F1FB; color: #185FA5; }
+.qtext { font-size: 16px; line-height: 1.6; color: #111; }
+.ox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.ox-btn { padding: 22px; font-size: 30px; font-weight: 700; border: 1px solid #ddd; border-radius: 12px; background: #fff; cursor: pointer; width: 100%; }
+.mc-btn { width: 100%; padding: 12px 14px; font-size: 14px; text-align: left; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; display: block; margin-bottom: 8px; color: #222; line-height: 1.5; }
+.c-ok { background: #E1F5EE !important; border: 2px solid #1D9E75 !important; color: #0F6E56 !important; }
+.c-ng { background: #FCEBEB !important; border: 2px solid #E24B4A !important; color: #A32D2D !important; }
+.exp { padding: 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; }
+.exp-ok { background: #E1F5EE; border: 1px solid #1D9E75; }
+.exp-ng { background: #FCEBEB; border: 1px solid #E24B4A; }
+.exp-title { font-weight: 700; margin-bottom: 4px; }
+.rbox { background: #f0f0f0; border-radius: 12px; padding: 24px; text-align: center; margin: 16px 0; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.stat-box { background: #f0f0f0; border-radius: 8px; padding: 10px; text-align: center; }
+.ct { text-align: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+var FB = "https://school-quiz-acce1-default-rtdb.firebaseio.com";
+var TL = 15;
+var tmr = null;
+var S = { screen: "intro", grade: "", room: "", name: "", cur: 0, score: 0, sel: null, showExp: false, tLeft: TL, answers: [], saving: false };
+
+var QS = [
+  { t: "ox", q: "친구가 단톡방에서 한 명을 욕하자고 했을 때 구경만 해도 학교폭력에 해당된다.", a: true, e: "방관도 학교폭력의 한 형태입니다. 구경하거나 아무 행동도 안 하는 것도 가해에 해당될 수 있어요." },
+  { t: "mc", q: "친구가 매일 내 돈을 빼앗는 상황에서 가장 올바른 대처는?", o: ["그냥 참는다", "보복으로 나도 빼앗는다", "부모님이나 선생님께 알린다", "다른 친구들에게 소문낸다"], a: 2, e: "폭력 상황은 혼자 해결하려 하지 말고 믿을 수 있는 어른에게 알리는 것이 중요해요." },
+  { t: "ox", q: "사이버 공간에서의 괴롭힘은 학교폭력이 아니다.", a: false, e: "사이버폭력도 명백한 학교폭력입니다. 온라인 공간이라도 피해를 주면 모두 학교폭력에 해당해요." },
+  { t: "mc", q: "친구가 학교폭력 피해를 당하고 있다고 털어놓았을 때 가장 좋은 행동은?", o: ["네가 잘못한 게 있겠지라고 한다", "모른 척한다", "공감하고 함께 신고 방법을 알아본다", "친구들에게 소문낸다"], a: 2, e: "피해자의 말을 믿고 공감해 주는 것이 먼저입니다. 함께 어른에게 알리거나 신고 방법을 찾아보세요." },
+  { t: "ox", q: "장난으로 친구를 때려도 맞은 친구가 싫다고 하면 폭력이 된다.", a: true, e: "상대방이 싫다고 느끼면 그것은 폭력입니다. 장난이었다는 변명은 통하지 않아요." },
+  { t: "mc", q: "학교폭력 신고는 어떤 방법으로 할 수 있나요?", o: ["신고 방법이 없다", "117 신고센터에 전화", "친구들끼리 해결해야 한다", "SNS에 올린다"], a: 1, e: "117은 24시간 운영하는 학교폭력 신고 상담 전화입니다. 익명으로도 신고할 수 있어요." },
+  { t: "ox", q: "친구를 단톡방에서 강제로 내보내는 행위는 학교폭력이 아니다.", a: false, e: "카카오톡 방폭 등 사이버 따돌림도 학교폭력으로 처벌받을 수 있습니다." },
+  { t: "mc", q: "학교폭력 가해자가 되었을 때 가장 먼저 해야 할 일은?", o: ["증거를 없앤다", "도망친다", "피해자에게 진심으로 사과하고 어른에게 알린다", "친구들과 입을 맞춘다"], a: 2, e: "잘못을 인정하고 진심으로 사과하는 것이 중요합니다. 숨기거나 도망치면 더 큰 문제가 생겨요." },
+  { t: "ox", q: "피해 학생이 신고하지 말라고 해도 주변 어른이 신고할 수 있다.", a: true, e: "피해자가 두려움 때문에 신고를 꺼릴 수 있어요. 주변 사람이 대신 신고하는 것은 올바른 행동입니다." },
+  { t: "mc", q: "학교폭력 예방에 가장 효과적인 학교 문화는?", o: ["친구의 약점을 서로 놀리는 분위기", "서로 다름을 존중하고 배려하는 분위기", "강한 사람이 대우받는 분위기", "모든 것을 비밀로 하는 분위기"], a: 1, e: "서로 다름을 인정하고 배려하는 문화가 학교폭력을 예방하는 가장 강력한 방법입니다." },
+  { t: "ox", q: "친구가 지속적으로 내 물건을 숨기거나 망가뜨리는 행동은 학교폭력이다.", a: true, e: "재산을 손상시키거나 강탈하는 행동도 학교폭력에 해당합니다." },
+  { t: "mc", q: "학교폭력 피해를 당할 때 혼자 해결하려 하면 안 되는 이유는?", o: ["신고하면 더 맞을 수 있어서", "힘으로 이기면 괜찮아서", "상황이 더 악화될 수 있고 전문가 도움이 필요하기 때문", "아무것도 해결이 안 되어서"], a: 2, e: "전문가의 도움을 받는 것이 안전하고 효과적입니다." },
+  { t: "ox", q: "가해 학생도 학교폭력 후 심리 상담을 받을 수 있다.", a: true, e: "가해 학생도 변화할 수 있도록 상담 지원을 받을 수 있어요." },
+  { t: "mc", q: "장난과 학교폭력을 구분하는 기준은?", o: ["장난이라고 말했으면 괜찮다", "상대방이 불쾌하거나 피해를 느끼는지 여부", "친한 친구끼리면 괜찮다", "한 번만 했으면 괜찮다"], a: 1, e: "장난이라도 상대방이 불쾌하거나 피해를 입었다고 느낀다면 그것은 폭력입니다." },
+  { t: "ox", q: "학교폭력은 피해자의 잘못 때문에 발생하는 경우가 많다.", a: false, e: "학교폭력은 피해자의 잘못이 아닙니다. 잘못은 100% 가해자에게 있어요." }
+];
+
+function getCls() {
+  if (S.grade && S.room) { return S.grade + "학년 " + S.room + "반"; }
+  return "";
+}
+
+function getColor() {
+  if (S.tLeft > 8) { return "#1D9E75"; }
+  if (S.tLeft > 4) { return "#BA7517"; }
+  return "#D85A30";
+}
+
+function getGrade(sc) {
+  if (sc >= 90) { return { l: "학교 영웅", c: "#1D9E75" }; }
+  if (sc >= 70) { return { l: "든든한 친구", c: "#378ADD" }; }
+  if (sc >= 50) { return { l: "용감한 방관자", c: "#BA7517" }; }
+  return { l: "예비 수호자", c: "#D85A30" };
+}
+
+function startTimer() {
+  clearInterval(tmr);
+  tmr = setInterval(function () {
+    S.tLeft = S.tLeft - 1;
+    if (S.tLeft <= 0) {
+      clearInterval(tmr);
+      doAnswer(null);
+    } else {
+      updateTimer();
+    }
+  }, 1000);
+}
+
+function updateTimer() {
+  var tf = document.getElementById("tf");
+  var tn = document.getElementById("tn");
+  var tc = getColor();
+  if (tf) { tf.style.width = Math.round(S.tLeft / TL * 100) + "%"; tf.style.background = tc; }
+  if (tn) { tn.textContent = S.tLeft + "s"; tn.style.color = tc; }
+}
+
+function doAnswer(val) {
+  clearInterval(tmr);
+  var q = QS[S.cur];
+  var ok = (val === q.a);
+  var pts = 0;
+  if (ok) { pts = 5 + Math.floor(S.tLeft / 3); }
+  S.sel = val;
+  S.showExp = true;
+  S.score = S.score + pts;
+  S.answers.push({ ok: ok, pts: pts });
+  renderQuiz();
+}
+
+function doNext() {
+  if (S.saving) { return; }
+  if (S.cur + 1 >= QS.length) {
+    S.saving = true;
+    renderQuiz();
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", FB + "/scores.json");
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4) {
+        S.saving = false;
+        S.screen = "result";
+        render();
+      }
+    };
+    xhr.send(JSON.stringify({ cls: getCls(), name: S.name, score: S.score, ts: Date.now() }));
+  } else {
+    S.cur = S.cur + 1;
+    S.sel = null;
+    S.showExp = false;
+    S.tLeft = TL;
+    renderQuiz();
+    startTimer();
+  }
+}
+
+function doStart() {
+  if (!getCls() || !S.name.trim()) { return; }
+  S.screen = "quiz";
+  S.tLeft = TL;
+  render();
+  startTimer();
+}
+
+function doRestart() {
+  clearInterval(tmr);
+  S = { screen: "intro", grade: "", room: "", name: "", cur: 0, score: 0, sel: null, showExp: false, tLeft: TL, answers: [], saving: false };
+  render();
+}
+
+function render() {
+  if (S.screen === "intro") { renderIntro(); }
+  else if (S.screen === "result") { renderResult(); }
+  else { renderQuiz(); }
+}
+
+function renderIntro() {
+  var root = document.getElementById("root");
+  var html = "";
+  html += "<div class='wrap'>";
+  html += "<div class='ct' style='margin-bottom:20px'>";
+  html += "<div style='font-size:42px;margin-bottom:8px'>🏫</div>";
+  html += "<h1>학교폭력 예방 퀴즈</h1>";
+  html += "<p class='sub'>총 15문제 · 문제당 15초 · 빠를수록 보너스 점수</p>";
+  html += "</div>";
+  html += "<div class='row2'>";
+  html += "<div><label>학년</label><select id='sg' onchange='S.grade=this.value;checkBtn()'>";
+  html += "<option value=''>학년 선택</option>";
+  for (var i = 1; i <= 6; i++) {
+    html += "<option value='" + i + "'" + (S.grade == i ? " selected" : "") + ">" + i + "학년</option>";
+  }
+  html += "</select></div>";
+  html += "<div><label>반</label><select id='sr' onchange='S.room=this.value;checkBtn()'>";
+  html += "<option value=''>반 선택</option>";
+  for (var i = 1; i <= 20; i++) {
+    html += "<option value='" + i + "'" + (S.room == i ? " selected" : "") + ">" + i + "반</option>";
+  }
+  html += "</select></div>";
+  html += "</div>";
+  html += "<div class='field'><label>이름</label><input type='text' id='nm' placeholder='이름을 입력하세요' value='" + S.name + "' oninput='S.name=this.value;checkBtn()'></div>";
+  html += "<button class='btn' id='startBtn' onclick='doStart()' disabled>퀴즈 시작</button>";
+  html += "</div>";
+  root.innerHTML = html;
+  checkBtn();
+}
+
+function checkBtn() {
+  var btn = document.getElementById("startBtn");
+  if (btn) {
+    if (getCls() && S.name.trim()) { btn.disabled = false; }
+    else { btn.disabled = true; }
+  }
+}
+
+function renderQuiz() {
+  var root = document.getElementById("root");
+  var q = QS[S.cur];
+  var tc = getColor();
+  var last = S.answers.length > 0 ? S.answers[S.answers.length - 1] : null;
+  var pp = Math.round(S.cur / QS.length * 100);
+  var tp = Math.round(S.tLeft / TL * 100);
+  var nums = ["①", "②", "③", "④"];
+
+  var html = "<div class='wrap'>";
+  html += "<div class='meta'><span>" + getCls() + " · " + S.name + "</span><span>" + (S.cur + 1) + " / " + QS.length + "</span></div>";
+  html += "<div class='bar'><div class='barin' style='width:" + pp + "%;background:#1D9E75'></div></div>";
+  html += "<div class='trow'>";
+  html += "<div class='tbar'><div class='barin' id='tf' style='width:" + tp + "%;background:" + tc + "'></div></div>";
+  html += "<span id='tn' style='font-size:13px;font-weight:700;min-width:28px;color:" + tc + "'>" + S.tLeft + "s</span>";
+  html += "</div>";
+  html += "<div class='card'>";
+  if (q.t === "ox") { html += "<span class='badge badge-ox'>O / X</span>"; }
+  else { html += "<span class='badge badge-mc'>4지선다</span>"; }
+  html += "<div class='qtext' id='qtext'></div>";
+  html += "</div>";
+
+  if (q.t === "ox") {
+    html += "<div class='ox-grid'>";
+    var vals = [true, false];
+    for (var i = 0; i < vals.length; i++) {
+      var v = vals[i];
+      var cls2 = "ox-btn";
+      if (S.showExp) {
+        if (v === q.a) { cls2 += " c-ok"; }
+        else if (S.sel === v) { cls2 += " c-ng"; }
+      }
+      var dis = S.showExp ? " disabled" : "";
+      html += "<button class='" + cls2 + "'" + dis + " onclick='doAnswer(" + v + ")'>" + (v ? "O" : "X") + "</button>";
+    }
+    html += "</div>";
+  } else {
+    for (var i = 0; i < q.o.length; i++) {
+      var cls2 = "mc-btn";
+      if (S.showExp) {
+        if (i === q.a) { cls2 += " c-ok"; }
+        else if (S.sel === i) { cls2 += " c-ng"; }
+      }
+      var dis = S.showExp ? " disabled" : "";
+      html += "<button class='" + cls2 + "'" + dis + " onclick='doAnswer(" + i + ")'><span style='font-weight:700;margin-right:8px'>" + nums[i] + "</span><span id='opt" + i + "'></span></button>";
+    }
+  }
+
+  if (S.showExp && last) {
+    var expCls = last.ok ? "exp exp-ok" : "exp exp-ng";
+    var expColor = last.ok ? "#0F6E56" : "#A32D2D";
+    var expTitle = last.ok ? "정답! +" + last.pts + "점" : "오답";
+    html += "<div class='" + expCls + "'>";
+    html += "<div class='exp-title' style='color:" + expColor + "'>" + expTitle + "</div>";
+    html += "<div id='exptext'></div>";
+    html += "</div>";
+    var btnLabel = "다음 문제";
+    if (S.saving) { btnLabel = "저장 중..."; }
+    else if (S.cur + 1 >= QS.length) { btnLabel = "결과 보기"; }
+    html += "<button class='btn'" + (S.saving ? " disabled" : "") + " onclick='doNext()'>" + btnLabel + "</button>";
+  }
+
+  html += "</div>";
+  root.innerHTML = html;
+
+  var qtEl = document.getElementById("qtext");
+  if (qtEl) { qtEl.textContent = q.q; }
+
+  if (q.t === "mc") {
+    for (var i = 0; i < q.o.length; i++) {
+      var optEl = document.getElementById("opt" + i);
+      if (optEl) { optEl.textContent = q.o[i]; }
+    }
+  }
+
+  if (S.showExp) {
+    var exEl = document.getElementById("exptext");
+    if (exEl) { exEl.textContent = q.e; }
+  }
+}
+
+function renderResult() {
+  var root = document.getElementById("root");
+  var gi = getGrade(S.score);
+  var correct = 0;
+  for (var i = 0; i < S.answers.length; i++) {
+    if (S.answers[i].ok) { correct = correct + 1; }
+  }
+  var html = "<div class='wrap ct'>";
+  html += "<div style='font-size:42px;margin-bottom:8px'>🎉</div>";
+  html += "<h1>퀴즈 완료!</h1>";
+  html += "<p class='sub' style='margin-top:4px'>" + getCls() + " · " + S.name + "</p>";
+  html += "<div class='rbox'>";
+  html += "<div style='font-size:42px;font-weight:800;color:" + gi.c + "'>" + S.score + "점</div>";
+  html += "<div style='font-size:18px;font-weight:700;margin-top:4px;color:" + gi.c + "'>" + gi.l + "</div>";
+  html += "</div>";
+  html += "<div class='stat-grid'>";
+  html += "<div class='stat-box'><div style='font-size:12px;color:#888'>정답수</div><div style='font-size:18px;font-weight:700'>" + correct + "/15</div></div>";
+  html += "<div class='stat-box'><div style='font-size:12px;color:#888'>점수</div><div style='font-size:18px;font-weight:700'>" + S.score + "점</div></div>";
+  html += "<div class='stat-box'><div style='font-size:12px;color:#888'>정확도</div><div style='font-size:18px;font-weight:700'>" + Math.round(correct / 15 * 100) + "%</div></div>";
+  html += "</div>";
+  html += "<button class='btn' onclick='doRestart()'>다음 사람</button>";
+  html += "</div>";
+  root.innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
